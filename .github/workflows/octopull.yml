@@ -1,0 +1,29 @@
+name: レポジトリ共通ファイルの同期
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+    paths:
+      - 'hello.sh'
+      - 'scripts/**'
+      - '.github/workflows/**'
+jobs:
+  octopull:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+    - uses: actions/checkout@v2
+    - name: sync files
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
+        npm install octopull
+        mv node_modules/octopull/lib/api/ node_modules/octopull/
+        mv node_modules/octopull/lib/index.js node_modules/octopull/
+        pr_body=$(jq '.pull_request.body' $GITHUB_EVENT_PATH)
+        pr_body="${pr_body%\"}"
+        pr_body="${pr_body#\"}"
+        node scripts/octopull.js '${{ github.event.pull_request.head.repo.name }}' '${{ github.event.pull_request.head.ref }}' '${{ github.event.pull_request.title }}' "$pr_body\n\n---\n\nCreated via ${{ github.event.pull_request.html_url }}"
+
